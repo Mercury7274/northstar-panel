@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NORTHSTAR // FRONTIER DEFENSE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+:root {
+  --bg:      #0a080f;
+  --bg2:     #100d18;
+  --bg3:     #161220;
+  --border:  #2a1f40;
+  --purple:  #9b5de5;
+  --purple2: #b47aff;
+  --purple3: #6d3bbf;
+  --cyan:    #3fb8c8;
+  --red:     #c83060;
+  --green:   #3dc87a;
+  --text:    #d0c8e8;
+  --muted:   #5a4870;
+  --mono:    'Share Tech Mono', monospace;
+  --sans:    'Rajdhani', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* HEADER */
+header { display: flex; align-items: center; justify-content: space-between; padding: 10px 22px; border-bottom: 1px solid var(--border); background: var(--bg2); flex: 0 0 auto; }
+.logo { font-family: var(--mono); font-size: 12px; color: var(--purple); letter-spacing: 3px; }
+.logo span { color: var(--muted); }
+.status-badge { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background .3s; }
+.dot.online  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+.dot.offline { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+
+/* PENDING */
+#pending-bar { background: var(--bg2); border-bottom: 1px solid var(--purple); color: var(--purple); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; padding: 6px 22px; display: none; align-items: center; gap: 10px; flex: 0 0 auto; }
+#pending-bar.show { display: flex; }
+.blink { animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* LAYOUT */
+main { flex: 1; display: grid; grid-template-columns: 1fr 310px; overflow: hidden; }
+.left-col { display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid var(--border); }
+.sidebar { display: flex; flex-direction: column; overflow: hidden; background: var(--bg2); }
+
+/* COLLAPSIBLE SECTIONS */
+.section { border-bottom: 1px solid var(--border); }
+.sec-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px; cursor: pointer; user-select: none;
+  background: var(--bg2); transition: background .15s;
+}
+.sec-header:hover { background: var(--bg3); }
+.sec-title { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--purple); text-transform: uppercase; }
+.sec-arrow { font-family: var(--mono); font-size: 10px; color: var(--muted); transition: transform .2s; }
+.sec-arrow.open { transform: rotate(90deg); }
+.sec-body { overflow: hidden; }
+.sec-body.collapsed { display: none; }
+
+/* MAP GRID */
+.map-grid { display: grid; grid-template-columns: repeat(5, 1fr); }
+.map-card {
+  position: relative; cursor: pointer;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  overflow: hidden; aspect-ratio: 16/9;
+  background: linear-gradient(135deg, #16122a 0%, #0d0a18 100%);
+}
+.map-card:nth-child(5n) { border-right: none; }
+.map-card img { width: 100%; height: 100%; object-fit: cover; opacity: .5; transition: opacity .2s; display: block; }
+.map-card:hover img { opacity: .7; }
+.map-card.active img { opacity: .85; }
+.map-card-fallback {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #1e1430 0%, #0d0a1a 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.map-card-fallback-text { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 1px; text-align: center; padding: 4px; }
+.map-card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.88) 0%, transparent 55%);
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 6px 8px;
+}
+.map-card.active .map-card-overlay { box-shadow: inset 0 0 0 2px var(--purple); background: linear-gradient(to top, rgba(155,93,229,.4) 0%, transparent 55%); }
+.map-card-name { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.1; }
+.map-card-id { font-family: var(--mono); font-size: 8px; color: rgba(255,255,255,.45); margin-top: 2px; }
+.map-check { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; background: var(--purple); border-radius: 2px; display: none; align-items: center; justify-content: center; font-size: 9px; color: #fff; }
+.map-card.active .map-check { display: flex; }
+
+/* DIFFICULTY */
+.diff-row { display: flex; padding: 10px 12px; gap: 8px; }
+.diff-btn { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 13px; font-weight: 700; letter-spacing: 1px; padding: 8px 4px; cursor: pointer; border-radius: 2px; transition: all .15s; text-transform: uppercase; }
+.diff-btn:hover { border-color: var(--purple); color: var(--purple); }
+.diff-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+
+/* PARAMS */
+.params-grid { padding: 12px 16px; display: flex; flex-direction: column; gap: 0; }
+.param-group-title { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--purple3); text-transform: uppercase; padding: 10px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.param-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(42,31,64,.5); }
+.param-row:last-child { border-bottom: none; }
+.param-info { flex: 1; }
+.param-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.param-desc { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.param-control { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+
+/* TOGGLE */
+.toggle-wrap { display: flex; align-items: center; gap: 6px; }
+.toggle { position: relative; width: 38px; height: 20px; cursor: pointer; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; transition: .2s; }
+.toggle-slider:before { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .2s; }
+.toggle input:checked + .toggle-slider { background: var(--purple3); border-color: var(--purple); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(18px); background: var(--purple2); }
+.toggle-val { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 14px; }
+
+/* SLIDER */
+.slider-wrap { display: flex; align-items: center; gap: 8px; }
+.param-slider { -webkit-appearance: none; width: 100px; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+.param-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--purple); border-radius: 50%; cursor: pointer; }
+.slider-val { font-family: var(--mono); font-size: 11px; color: var(--purple2); min-width: 28px; text-align: right; }
+
+/* LOGS */
+.log-section { flex: 0 0 300px; display: flex; flex-direction: column; border-bottom: 1px solid var(--border); }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--bg2); flex: 0 0 auto; }
+.log-controls { display: flex; gap: 6px; }
+.log-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 10px; padding: 3px 8px; cursor: pointer; border-radius: 2px; transition: all .15s; }
+.log-btn:hover { border-color: var(--purple); color: var(--purple); }
+.log-btn.active { border-color: var(--green); color: var(--green); }
+#log-container { flex: 1; overflow-y: auto; padding: 8px 12px; background: var(--bg); font-family: var(--mono); font-size: 11px; color: #7a6a9a; }
+.log-line { line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+.log-line.warn  { color: #c8a030; }
+.log-line.error { color: var(--red); }
+.log-line.info  { color: var(--cyan); }
+
+/* SIDEBAR */
+.actions-section { flex: 0 0 auto; border-bottom: 1px solid var(--border); padding: 12px; }
+.sidebar-title { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--purple); text-transform: uppercase; margin-bottom: 10px; }
+.action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { padding: 10px 6px; border: 1px solid; border-radius: 2px; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all .15s; text-align: center; }
+.btn-apply { grid-column: span 2; background: var(--purple); border-color: var(--purple); color: #fff; }
+.btn-apply:hover { background: var(--purple2); border-color: var(--purple2); }
+.btn-restart { background: transparent; border-color: var(--cyan);  color: var(--cyan); }
+.btn-restart:hover { background: rgba(63,184,200,.1); }
+.btn-stop    { background: transparent; border-color: var(--red);   color: var(--red); }
+.btn-stop:hover    { background: rgba(200,48,96,.1); }
+.btn-start   { background: transparent; border-color: var(--green); color: var(--green); }
+.btn-start:hover   { background: rgba(61,200,122,.1); }
+
+.stats-section { flex: 0 0 auto; border-bottom: 1px solid var(--border); padding: 12px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.stat-tile { background: var(--bg3); border: 1px solid var(--border); border-radius: 2px; padding: 10px; }
+.stat-label { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.stat-value { font-family: var(--mono); font-size: 20px; color: var(--purple2); margin-top: 4px; line-height: 1; }
+.stat-value.sm { font-size: 11px; color: var(--text); word-break: break-all; margin-top: 6px; }
+.stat-wide { grid-column: span 2; }
+
+.players-section { flex: 1; overflow-y: auto; padding: 12px; }
+.player-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
+.player-item:last-child { border-bottom: none; }
+.player-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.empty-players { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+#toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg2); border: 1px solid var(--purple); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 10px 16px; border-radius: 3px; transform: translateY(60px); opacity: 0; transition: all .2s; z-index: 100; max-width: 260px; }
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.error { border-color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NORTHSTAR <span>//</span> FRONTIER DEFENSE <span>//</span> PANEL</div>
+  <div class="status-badge">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text" style="color:var(--muted)">—</span>
+  </div>
+</header>
+
+<div id="pending-bar"><span class="blink">◆</span> Changements en attente — clique sur <strong style="margin-left:4px">APPLIQUER</strong></div>
+
+<main>
+  <div class="left-col">
+
+    <!-- MAPS -->
+    <div class="section">
+      <div class="sec-header" onclick="toggleSection(this)">
+        <span class="sec-title">▸ Sélection de la map</span>
+        <span class="sec-arrow open">▶</span>
+      </div>
+      <div class="sec-body">
+        <div class="map-grid">
+          {% for m in maps %}
+          <div class="map-card {% if m.id == current_map %}active{% endif %}" data-map="{{ m.id }}" onclick="selectMap(this)">
+            <div class="map-card-fallback"><div class="map-card-fallback-text">{{ m.name }}</div></div>
+            <img src="{{ m.img }}" alt="{{ m.name }}" loading="lazy" onerror="this.style.display='none'">
+            <div class="map-card-overlay">
+              <div class="map-card-name">{{ m.name }}</div>
+              <div class="map-card-id">{{ m.id }}</div>
+            </div>
+            <div class="map-check">✓</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- DIFFICULTY -->
+    <div class="section">
+      <div class="sec-header" onclick="toggleSection(this)">
+        <span class="sec-title">▸ Difficulté</span>
+        <span class="sec-arrow open">▶</span>
+      </div>
+      <div class="sec-body">
+        <div class="diff-row">
+          {% for d in difficulties %}
+          <button class="diff-btn {% if d.id == current_difficulty %}active{% endif %}" data-diff="{{ d.id }}" onclick="selectDiff(this)">{{ d.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- PARAMS -->
+    <div class="section">
+      <div class="sec-header" onclick="toggleSection(this)">
+        <span class="sec-title">▸ Paramètres avancés</span>
+        <span class="sec-arrow">▶</span>
+      </div>
+      <div class="sec-body collapsed">
+        <div class="params-grid">
+          {% for group_name, params in param_groups.items() %}
+          <div class="param-group-title">{{ group_name }}</div>
+          {% for p in params %}
+          <div class="param-row">
+            <div class="param-info">
+              <div class="param-label">{{ p.label }}</div>
+              <div class="param-desc">{{ p.desc }}</div>
+            </div>
+            <div class="param-control">
+              {% if p.type == 'toggle' %}
+              <div class="toggle-wrap">
+                <label class="toggle">
+                  <input type="checkbox" data-key="{{ p.key }}" {% if p.current|int == 1 %}checked{% endif %} onchange="markDirty()">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-val">{{ p.current }}</span>
+              </div>
+              {% elif p.type == 'slider' %}
+              <div class="slider-wrap">
+                <input type="range" class="param-slider" data-key="{{ p.key }}"
+                  min="{{ p.min }}" max="{{ p.max }}" step="{{ p.step }}" value="{{ p.current }}"
+                  oninput="updateSlider(this)" onchange="markDirty()">
+                <span class="slider-val">{{ p.current }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="section log-section">
+      <div class="log-header">
+        <span class="sec-title">▸ Logs serveur</span>
+        <div class="log-controls">
+          <button class="log-btn active" id="btn-autoscroll" onclick="toggleAutoscroll()">AUTO-SCROLL ↓</button>
+          <button class="log-btn" onclick="clearLogs()">EFFACER</button>
+        </div>
+      </div>
+      <div id="log-container"></div>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="actions-section">
+      <div class="sidebar-title">▸ Actions</div>
+      <div class="action-row">
+        <button class="btn btn-apply" onclick="applyConfig()">⬡ Appliquer</button>
+        <button class="btn btn-restart" onclick="doAction('restart')">↺ Restart</button>
+        <button class="btn btn-stop"    onclick="doAction('stop')">◼ Arrêter</button>
+        <button class="btn btn-start"   onclick="doAction('start')">▶ Démarrer</button>
+      </div>
+    </div>
+    <div class="stats-section">
+      <div class="sidebar-title">▸ État du serveur</div>
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="stat-label">Joueurs</div><div class="stat-value" id="stat-players">—</div></div>
+        <div class="stat-tile"><div class="stat-label">Statut</div><div class="stat-value sm" id="stat-status">—</div></div>
+        <div class="stat-tile stat-wide"><div class="stat-label">Map active</div><div class="stat-value sm" id="stat-map">—</div></div>
+        <div class="stat-tile stat-wide"><div class="stat-label">Difficulté</div><div class="stat-value sm" id="stat-diff">—</div></div>
+      </div>
+    </div>
+    <div class="players-section">
+      <div class="sidebar-title">▸ Joueurs connectés</div>
+      <div id="player-list"><div class="empty-players">Aucun joueur</div></div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+let selectedMap  = "{{ current_map }}";
+let selectedDiff = "{{ current_difficulty }}";
+let autoScroll   = true;
+
+function toggleSection(header) {
+  const arrow = header.querySelector('.sec-arrow');
+  const body  = header.nextElementSibling;
+  const open  = arrow.classList.contains('open');
+  arrow.classList.toggle('open', !open);
+  body.classList.toggle('collapsed', open);
+}
+
+function selectMap(el) {
+  document.querySelectorAll('.map-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedMap = el.dataset.map;
+  markDirty();
+}
+
+function selectDiff(el) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  selectedDiff = el.dataset.diff;
+  markDirty();
+}
+
+function markDirty() {
+  document.getElementById('pending-bar').classList.add('show');
+}
+
+function updateSlider(el) {
+  el.nextElementSibling.textContent = el.value;
+  // also update toggle-val for toggles
+}
+
+function toggleAutoscroll() {
+  autoScroll = !autoScroll;
+  const btn = document.getElementById('btn-autoscroll');
+  btn.classList.toggle('active', autoScroll);
+  btn.textContent = autoScroll ? 'AUTO-SCROLL ↓' : 'AUTO-SCROLL ○';
+}
+
+function clearLogs() { document.getElementById('log-container').innerHTML = ''; }
+
+function getParams() {
+  const params = {};
+  document.querySelectorAll('[data-key]').forEach(el => {
+    if (el.type === 'checkbox') params[el.dataset.key] = el.checked ? 1 : 0;
+    else if (el.type === 'range') params[el.dataset.key] = parseInt(el.value);
+  });
+  return params;
+}
+
+async function applyConfig() {
+  const res = await fetch('/api/apply', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ map: selectedMap, difficulty: selectedDiff, params: getParams() })
+  });
+  const data = await res.json();
+  toast(data.message, data.ok ? 'ok' : 'error');
+  if (data.ok) document.getElementById('pending-bar').classList.remove('show');
+}
+
+async function doAction(action) {
+  const res = await fetch('/api/' + action, { method: 'POST' });
+  const data = await res.json();
+  toast(data.message, data.ok ? 'ok' : 'error');
+  setTimeout(refreshStatus, 2000);
+}
+
+async function refreshStatus() {
+  try {
+    const d = await fetch('/api/status').then(r => r.json());
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    dot.className = 'dot ' + (d.running ? 'online' : 'offline');
+    txt.textContent = d.running ? 'EN LIGNE' : 'HORS LIGNE';
+    txt.style.color = d.running ? 'var(--green)' : 'var(--red)';
+    document.getElementById('stat-players').textContent = d.player_count;
+    document.getElementById('stat-status').textContent  = d.running ? 'ONLINE' : 'OFFLINE';
+    document.getElementById('stat-map').textContent     = d.map || '—';
+    document.getElementById('stat-diff').textContent    = d.difficulty || '—';
+    const list = document.getElementById('player-list');
+    if (d.players && d.players.length > 0) {
+      list.innerHTML = d.players.map(p => '<div class="player-item"><div class="player-dot"></div>' + p + '</div>').join('');
+    } else {
+      list.innerHTML = '<div class="empty-players">Aucun joueur</div>';
+    }
+  } catch(e) {}
+}
+
+const lc = document.getElementById('log-container');
+const es = new EventSource('/api/logs/stream');
+es.onmessage = e => {
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  const l = e.data.toLowerCase();
+  if (l.includes('error') || l.includes('err:')) div.classList.add('error');
+  else if (l.includes('warn')) div.classList.add('warn');
+  else if (l.includes('info') || l.includes('player')) div.classList.add('info');
+  div.textContent = e.data;
+  lc.appendChild(div);
+  while (lc.children.length > 500) lc.removeChild(lc.firstChild);
+  if (autoScroll) lc.scrollTop = lc.scrollHeight;
+};
+es.onerror = () => {
+  const div = document.createElement('div');
+  div.className = 'log-line warn';
+  div.textContent = '[panel] Connexion logs perdue — reconnexion...';
+  lc.appendChild(div);
+};
+
+let tt;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type === 'error' ? ' error' : '');
+  clearTimeout(tt);
+  tt = setTimeout(() => el.className = '', 3500);
+}
+
+// Update toggle display values
+document.querySelectorAll('.toggle input').forEach(el => {
+  el.addEventListener('change', () => {
+    el.closest('.toggle-wrap').querySelector('.toggle-val').textContent = el.checked ? 1 : 0;
+  });
+});
+
+refreshStatus();
+setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>
